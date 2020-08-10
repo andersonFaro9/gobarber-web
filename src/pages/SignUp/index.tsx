@@ -6,9 +6,10 @@ import {
 import * as Yup from 'yup';
 import { Form } from '@unform/web';
 import { FormHandles } from '@unform/core';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import getValidationErrors from '../../utils/getValidationErrors';
-
+import api from '../../services/api';
+import { useToast } from '../../hooks/toast';
 import {
   Container, Content, AnimationContainer, Background,
 } from './styles';
@@ -17,8 +18,17 @@ import logo from '../../assets/logo.svg';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 
+interface SignUpFormData {
+  name: string;
+  email: string;
+  password: string;
+}
+
 const SignUp: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
+
+  const { addToast } = useToast();
+  const history = useHistory();
 
   const handleSubmit = useCallback(async (data: object) => {
     try {
@@ -34,12 +44,31 @@ const SignUp: React.FC = () => {
       await schema.validate(data, {
         abortEarly: false,
       });
+
+      await api.post('/users', data);
+      history.push('/');
+      addToast({
+        type: 'success',
+        title: 'Cadastro realizado com sucesso',
+        description: 'Você já pode fazer seu login no GoBarber',
+
+      });
     } catch (err) {
-      const errors = getValidationErrors(err);
-      // eslint-disable-next-line no-unused-expressions
-      formRef.current?.setErrors(errors);
+      if (err instanceof Yup.ValidationError) {
+        const errors = getValidationErrors(err);
+        // eslint-disable-next-line no-unused-expressions
+        formRef.current?.setErrors(errors);
+        return;
+      }
+
+      addToast({
+        type: 'error',
+        title: 'Erro no cadastro',
+        description: 'Ocorreu um erro ao fazer cadastro, tente novamente',
+
+      });
     }
-  }, []);
+  }, [addToast, history]);
   return (
     <Container>
       <Background />
